@@ -99,7 +99,6 @@ func importDeck(from data: Data, context: ModelContext) throws -> Deck {
         chapter.deck = deck
         context.insert(chapter)
         chapterMap[info.index] = chapter
-        deck.chapters.append(chapter)
     }
 
     // Deduplicate by (lemma, pos) and create cards
@@ -120,10 +119,10 @@ func importDeck(from data: Data, context: ModelContext) throws -> Deck {
             extra: wordInfo.extra,
             aiGenerated: wordInfo.aiGenerated
         )
+        card.deckID = deck.id
         card.deck = deck
         card.sourceChapter = chapterMap[wordInfo.sourceChapter]
         context.insert(card)
-        deck.cards.append(card)
     }
 
     try context.save()

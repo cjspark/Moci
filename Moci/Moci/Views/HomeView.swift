@@ -90,8 +90,18 @@ struct DeckCardView: View {
     let deck: Deck
     let onStudy: () -> Void
 
-    private var newCount: Int  { min(deck.newCardsCount, 20) }
-    private var dueCount: Int  { deck.dueCardsCount }
+    @Query private var deckCards: [Card]
+
+    init(deck: Deck, onStudy: @escaping () -> Void) {
+        self.deck = deck
+        self.onStudy = onStudy
+        let id = deck.id
+        self._deckCards = Query(filter: #Predicate<Card> { $0.deckID == id })
+    }
+
+    private var activeCards: [Card] { deckCards.filter { $0.status == .active } }
+    private var newCount: Int  { min(activeCards.filter { $0.fsrsState == .new }.count, 20) }
+    private var dueCount: Int  { activeCards.filter { $0.fsrsState != .new && $0.due <= Date() }.count }
     private var totalStudy: Int { newCount + dueCount }
 
     var body: some View {
@@ -101,7 +111,7 @@ struct DeckCardView: View {
                     Text(deck.title)
                         .font(.headline)
                         .lineLimit(2)
-                    Text("\(deck.cards.count) words · \(deck.language.uppercased())")
+                    Text("\(deckCards.count) words · \(deck.language.uppercased())")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

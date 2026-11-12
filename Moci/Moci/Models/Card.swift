@@ -11,6 +11,7 @@ final class Card {
     var meaning: String
     var aiGenerated: Bool
     var status: CardStatus
+    var deckID: UUID?          // redundant but reliable for @Query predicates
     var deck: Deck?
     var sourceChapter: Chapter?
 
@@ -48,6 +49,7 @@ final class Card {
         self.meaning = meaning
         self.aiGenerated = aiGenerated
         self.status = .active
+        self.deckID = nil
         self.examplesJSON = (try? String(data: JSONEncoder().encode(examples), encoding: .utf8)) ?? "[]"
         self.extraJSON = (try? String(data: JSONEncoder().encode(extra), encoding: .utf8)) ?? "{}"
         self.due = Date()

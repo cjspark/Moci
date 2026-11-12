@@ -6,6 +6,8 @@ struct StudyView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
+    @Query private var deckCards: [Card]
+
     @State private var queue: [Card] = []
     @State private var currentIndex = 0
     @State private var isFlipped = false
@@ -13,6 +15,12 @@ struct StudyView: View {
     @State private var sessionReviewCount = 0
 
     private let dailyNewLimit = 20
+
+    init(deck: Deck) {
+        self.deck = deck
+        let id = deck.id
+        self._deckCards = Query(filter: #Predicate<Card> { $0.deckID == id })
+    }
 
     private var currentCard: Card? {
         currentIndex < queue.count ? queue[currentIndex] : nil
@@ -93,6 +101,12 @@ struct StudyView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
+                if sessionNewCount == 0 && sessionReviewCount == 0 {
+                    Text("Nothing due today — come back tomorrow!")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
             }
             Spacer()
 
@@ -100,22 +114,23 @@ struct StudyView: View {
                 .buttonStyle(.borderedProminent)
                 .padding(.bottom, 40)
         }
+        .padding()
     }
 
     // MARK: - Logic
 
     private func buildQueue() {
         let now = Date()
+        let active = deckCards.filter { $0.status == .active }
+
         var result: [Card] = []
 
-        // Due review cards first, sorted by overdue-ness
-        let due = deck.activeCards
+        let due = active
             .filter { $0.fsrsState != .new && $0.due <= now }
             .sorted { $0.due < $1.due }
         result.append(contentsOf: due)
 
-        // New cards up to daily limit
-        let new = deck.activeCards
+        let new = active
             .filter { $0.fsrsState == .new }
             .prefix(dailyNewLimit)
         result.append(contentsOf: new)
@@ -127,19 +142,16 @@ struct StudyView: View {
         let wasNew = card.fsrsState == .new
         let result = FSRS.schedule(card: card, rating: rating)
 
-        // Write review log
         let log = ReviewLog(rating: rating, elapsedDays: result.elapsedDays, scheduledDays: result.scheduledDays)
         log.card = card
         modelContext.insert(log)
 
-        // Apply FSRS result
         card.apply(result)
 
-        // Session counters
         if wasNew { sessionNewCount += 1 }
         else       { sessionReviewCount += 1 }
 
-        // Re-queue "Again" cards at end of session
+        // Re-queue "Again" cards at the end
         if rating == 1 {
             queue.append(card)
         }
