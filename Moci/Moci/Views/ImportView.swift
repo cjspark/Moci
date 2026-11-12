@@ -87,7 +87,7 @@ struct ImportView: View {
                             .font(.caption.bold())
                             .frame(width: 26, height: 26)
                             .background(Color.accentColor.opacity(0.15))
-                            .foregroundStyle(.accent)
+                            .foregroundStyle(Color.accentColor)
                             .clipShape(Circle())
 
                         VStack(alignment: .leading, spacing: 2) {

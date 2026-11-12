@@ -99,7 +99,7 @@ private struct CardBack: View {
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
                             .background(Color.accentColor.opacity(0.12))
-                            .foregroundStyle(.accent)
+                            .foregroundStyle(Color.accentColor)
                             .clipShape(Capsule())
                     }
                     Text(card.meaning)
