@@ -57,6 +57,12 @@ struct StudyView: View {
             }
         }
         .onAppear(perform: buildQueue)
+        .onChange(of: deckCards.count) { old, new in
+            // deckCards loads asynchronously; build queue once it's populated
+            if old == 0 && new > 0 && queue.isEmpty {
+                buildQueue()
+            }
+        }
     }
 
     // MARK: - Progress bar
