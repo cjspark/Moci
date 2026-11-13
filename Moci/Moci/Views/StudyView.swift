@@ -6,26 +6,18 @@ struct StudyView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
-    @Query private var deckCards: [Card]
-
     @State private var queue: [Card] = []
     @State private var currentIndex = 0
     @State private var isFlipped = false
     @State private var sessionNewCount = 0
     @State private var sessionReviewCount = 0
+    @State private var isLoading = true
 
     private let dailyNewLimit = 20
-
-    init(deck: Deck) {
-        self.deck = deck
-        let id = deck.id
-        self._deckCards = Query(filter: #Predicate<Card> { $0.deckID == id })
-    }
 
     private var currentCard: Card? {
         currentIndex < queue.count ? queue[currentIndex] : nil
     }
-
     private var remaining: Int { max(0, queue.count - currentIndex) }
 
     var body: some View {
@@ -33,7 +25,10 @@ struct StudyView: View {
             VStack(spacing: 0) {
                 progressBar
 
-                if let card = currentCard {
+                if isLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let card = currentCard {
                     FlashcardView(card: card, isFlipped: $isFlipped, onRate: { rate in
                         processRating(card: card, rating: rate)
                     })
@@ -57,12 +52,6 @@ struct StudyView: View {
             }
         }
         .onAppear(perform: buildQueue)
-        .onChange(of: deckCards.count) { old, new in
-            // deckCards loads asynchronously; build queue once it's populated
-            if old == 0 && new > 0 && queue.isEmpty {
-                buildQueue()
-            }
-        }
     }
 
     // MARK: - Progress bar
@@ -80,7 +69,7 @@ struct StudyView: View {
     }
 
     private var progressFraction: Double {
-        guard !queue.isEmpty else { return 1 }
+        guard !queue.isEmpty else { return 0 }
         return min(1, Double(currentIndex) / Double(queue.count))
     }
 
@@ -115,7 +104,6 @@ struct StudyView: View {
                 }
             }
             Spacer()
-
             Button("Done") { dismiss() }
                 .buttonStyle(.borderedProminent)
                 .padding(.bottom, 40)
@@ -126,9 +114,14 @@ struct StudyView: View {
     // MARK: - Logic
 
     private func buildQueue() {
-        let now = Date()
-        let active = deckCards.filter { $0.status == .active }
+        let deckID = deck.id
+        let descriptor = FetchDescriptor<Card>(
+            predicate: #Predicate<Card> { $0.deckID == deckID }
+        )
+        let allCards = (try? modelContext.fetch(descriptor)) ?? []
+        let active = allCards.filter { $0.status == .active }
 
+        let now = Date()
         var result: [Card] = []
 
         let due = active
@@ -142,6 +135,7 @@ struct StudyView: View {
         result.append(contentsOf: new)
 
         queue = result
+        isLoading = false
     }
 
     private func processRating(card: Card, rating: Int) {
@@ -157,7 +151,6 @@ struct StudyView: View {
         if wasNew { sessionNewCount += 1 }
         else       { sessionReviewCount += 1 }
 
-        // Re-queue "Again" cards at the end
         if rating == 1 {
             queue.append(card)
         }
