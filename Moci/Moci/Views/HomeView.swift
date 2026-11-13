@@ -5,7 +5,6 @@ struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Deck.createdAt, order: .reverse) private var decks: [Deck]
     @State private var studyDeck: Deck?
-    @State private var showStudy = false
 
     var body: some View {
         NavigationStack {
@@ -18,7 +17,6 @@ struct HomeView: View {
                         ForEach(decks) { deck in
                             DeckCardView(deck: deck) {
                                 studyDeck = deck
-                                showStudy = true
                             }
                         }
                     }
@@ -28,10 +26,8 @@ struct HomeView: View {
             .navigationTitle("墨词")
             .navigationBarTitleDisplayMode(.large)
         }
-        .fullScreenCover(isPresented: $showStudy) {
-            if let deck = studyDeck {
-                StudyView(deck: deck)
-            }
+        .fullScreenCover(item: $studyDeck) { deck in
+            StudyView(deck: deck)
         }
     }
 

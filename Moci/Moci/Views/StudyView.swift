@@ -51,7 +51,10 @@ struct StudyView: View {
                 }
             }
         }
-        .onAppear(perform: buildQueue)
+        .task {
+            print("📚 StudyView appeared — deck: \(deck.title), id: \(deck.id)")
+            buildQueue()
+        }
     }
 
     // MARK: - Progress bar
@@ -115,11 +118,14 @@ struct StudyView: View {
 
     private func buildQueue() {
         let deckID = deck.id
+        print("🔍 buildQueue — deckID: \(deckID)")
         let descriptor = FetchDescriptor<Card>(
             predicate: #Predicate<Card> { $0.deckID == deckID }
         )
         let allCards = (try? modelContext.fetch(descriptor)) ?? []
+        print("📦 fetched \(allCards.count) cards total")
         let active = allCards.filter { $0.status == .active }
+        print("✅ active: \(active.count)")
 
         let now = Date()
         var result: [Card] = []
@@ -134,6 +140,7 @@ struct StudyView: View {
             .prefix(dailyNewLimit)
         result.append(contentsOf: new)
 
+        print("🎯 queue: \(due.count) due + \(new.count) new = \(result.count) total")
         queue = result
         isLoading = false
     }
